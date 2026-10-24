@@ -1,0 +1,21 @@
+{
+  "name": "pixi-ui-editor-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm --filter vite-plugin-pixi-ui-editor build",
+    "dev": "pnpm --filter react-demo dev",
+    "test": "pnpm --filter vite-plugin-pixi-ui-editor test",
+    "typecheck": "pnpm -r typecheck",
+    "e2e": "pnpm --filter e2e test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.32.1"
+}

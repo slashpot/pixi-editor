@@ -1,0 +1,65 @@
+{
+  "name": "vite-plugin-pixi-ui-editor",
+  "version": "0.1.0",
+  "description": "Unity-like visual editor for @pixi/react scenes. A dev-only Vite plugin plus an in-browser overlay; your .tsx source stays the single source of truth.",
+  "license": "MIT",
+  "author": "Eric Lin",
+  "type": "module",
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "pixi",
+    "pixi.js",
+    "@pixi/react",
+    "editor",
+    "visual-editor",
+    "ui-editor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ericlin/pixi-ui-editor.git",
+    "directory": "packages/vite-plugin-pixi-ui-editor"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepack": "cp ../../LICENSE ../../README.md . && pnpm build",
+    "postpack": "rm -f LICENSE README.md"
+  },
+  "peerDependencies": {
+    "@pixi/react": "^8.0.0",
+    "pixi.js": "^8.0.0",
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@babel/parser": "^7.29.11",
+    "@babel/traverse": "^7.29.10",
+    "@babel/types": "^7.29.11",
+    "@types/babel__traverse": "^7.28.0",
+    "@types/node": "^24.0.0",
+    "magic-string": "^0.30.21",
+    "pixi.js": "^8.22.0",
+    "rollup-plugin-license": "^3.7.1",
+    "tsdown": "^0.23.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

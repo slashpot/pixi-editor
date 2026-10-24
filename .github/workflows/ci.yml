@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+      - name: Package contents
+        run: cd packages/vite-plugin-pixi-ui-editor && npm pack --dry-run
+
+  # the published peer range is vite ^6 || ^7 || ^8; the main job covers 8
+  vite-compat:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - vite: 6
+            plugin-react: 5
+          - vite: 7
+            plugin-react: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter e2e --filter react-demo add -D vite@${{ matrix.vite }} @vitejs/plugin-react@${{ matrix.plugin-react }}
+      - run: pnpm build
+      - run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
