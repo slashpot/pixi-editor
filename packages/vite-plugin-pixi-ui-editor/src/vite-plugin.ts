@@ -4,6 +4,7 @@ import { type Plugin, searchForWorkspaceRoot } from 'vite';
 import { DEFAULT_PALETTE, type PaletteTemplate } from './server/palette';
 import { editorApi } from './server/api';
 import { createDrafts, type Drafts } from './server/drafts';
+import { exposureWarnings } from './server/exposure';
 import { API_BASE, type ClientConfig, DEFAULT_QUERY_PARAM, DRAFTS_EVENT, type DraftsEvent } from './shared';
 import { tagJsx } from './tag-jsx';
 
@@ -60,6 +61,12 @@ export function pixiUiEditor(options: PixiUiEditorOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      const warnings = exposureWarnings(server.config.server);
+      if (warnings.length) {
+        server.config.logger.warn(
+          ['(!) pixi-ui-editor can rewrite your .jsx/.tsx files, and:', ...warnings.map((w) => `  - ${w}`)].join('\n'),
+        );
+      }
       const env = server.environments.client;
       const rel = (file: string) => relative(workspaceRoot, file).split(sep).join('/');
       const store = createDrafts({

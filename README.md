@@ -153,7 +153,7 @@ The editor's API rewrites files under `root` (when you apply drafts). Its safegu
 - Vite's host check (`server.allowedHosts`) runs before the API, which blocks DNS rebinding.
 - Writes are limited to `.jsx`/`.tsx` files inside `root`, and never under `node_modules`. A symlink that points outside `root` is refused.
 
-These safeguards rely on Vite's defaults. Setting `server.cors: true` (or a CORS `origin` that lets other sites in) or `server.allowedHosts: true` turns them off, and any website you visit could then edit your files.
+These safeguards rely on Vite's defaults. Setting `server.cors: true` (or a CORS `origin` that lets other sites in) or `server.allowedHosts: true` turns them off, and any website you visit could then edit your files. The plugin prints a warning when the dev server starts with one of these settings, or with `--host`.
 
 If you expose the dev server to your network (`vite --host`), **anyone who can reach it can edit those files**. Only do that on networks you trust.
 
