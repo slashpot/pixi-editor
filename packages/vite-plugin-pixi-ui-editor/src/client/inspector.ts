@@ -36,7 +36,7 @@ export function createInspector(session: Session, { openInEditor }: InspectorOpt
 
   function render() {
     const { entry, info, error, ref } = session;
-    const focused = (document.activeElement as HTMLElement | null)?.dataset?.prop;
+    const focused = panel.contains(document.activeElement) ? fieldState(document.activeElement) : undefined;
     panel.replaceChildren();
     panel.style.display = ref ? 'block' : 'none';
     if (!ref) return;
@@ -73,10 +73,15 @@ export function createInspector(session: Session, { openInEditor }: InspectorOpt
     panel.append(crumbs, file, actions(), h('hr', { style: HR_STYLE }), table, addRow());
     if (error) panel.append(h('div', { style: ERROR_STYLE, 'data-error': '' }, [error]));
 
-    const input = focused && panel.querySelector<HTMLInputElement>(`[data-prop="${CSS.escape(focused)}"]`);
+    const input = focused && panel.querySelector<HTMLInputElement>(`[data-prop="${CSS.escape(focused.prop)}"]`);
     if (input) {
       input.focus();
-      if (input.type === 'text') input.setSelectionRange(input.value.length, input.value.length);
+      if (input.type !== 'text') return;
+      // a refresh landing mid-typing (e.g. the HMR of the previous edit) keeps the draft and the
+      // selection, unless the source changed this very field
+      if (focused.edited && input.dataset.shown === focused.shown) input.value = focused.value;
+      if (input.value === focused.value) input.setSelectionRange(focused.start, focused.end);
+      else input.setSelectionRange(input.value.length, input.value.length);
     }
   }
 
@@ -153,6 +158,7 @@ export function createInspector(session: Session, { openInEditor }: InspectorOpt
 
     const input = h('input', { type: 'text', 'data-prop': key, style: INPUT_STYLE }) as HTMLInputElement;
     input.value = String(value);
+    input.dataset.shown = input.value;
     if (isTexture) {
       input.setAttribute('list', textureKeys.id);
       input.onfocus = fillTextureKeys;
@@ -265,6 +271,20 @@ function codeCell(code: string) {
   return h('span', { style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0', title: code }, [
     h('code', { style: 'color:#888' }, [code]),
   ]);
+}
+
+/** What the focused field holds before a re-render replaces it. */
+function fieldState(el: Element | null) {
+  if (!(el instanceof HTMLInputElement) || !el.dataset.prop) return undefined;
+  const text = el.type === 'text';
+  return {
+    prop: el.dataset.prop,
+    value: el.value,
+    shown: el.dataset.shown,
+    edited: text && el.value !== el.dataset.shown,
+    start: (text && el.selectionStart) || 0,
+    end: (text && el.selectionEnd) || 0,
+  };
 }
 
 export function h(tag: string, attrs: Record<string, string> = {}, children: (Node | string)[] = []) {

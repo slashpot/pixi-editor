@@ -86,6 +86,8 @@ export class Editor {
   readonly toolbar: Locator;
   /** Every confirm() the editor showed. */
   readonly dialogs: string[] = [];
+  /** How the next confirm() is answered. */
+  answer = true;
 
   constructor(
     readonly page: Page,
@@ -94,16 +96,18 @@ export class Editor {
     this.hierarchy = page.locator('[data-pixi-ui-editor="hierarchy"]');
     this.inspector = page.locator('[data-pixi-ui-editor="inspector"]');
     this.toolbar = page.locator('[data-pixi-ui-editor="toolbar"]');
-    // the editor asks before rewriting shared consts / expressions and before deleting; tests say yes
+    // the editor asks before rewriting shared consts / expressions, moving a .map's items and deleting
     page.on('dialog', (dialog) => {
       this.dialogs.push(dialog.message());
-      void dialog.accept();
+      void (this.answer ? dialog.accept() : dialog.dismiss());
     });
   }
 
   async open() {
     await this.page.goto(`${this.demo.url}?editor`);
     await expect(this.row('title')).toBeVisible();
+    // the Hierarchy can show before the demo's onInit publishes the app the helpers below read
+    await this.page.waitForFunction(() => !!globalThis.__PIXI_APP__);
   }
 
   /** The Hierarchy row of the element with this `label` prop (the outermost, for a component passing it on). */

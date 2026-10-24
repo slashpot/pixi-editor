@@ -86,8 +86,6 @@ export interface ElementInfo {
   props: PropInfo[];
   /** Whether the element sits directly inside another JSX element (can be moved / deleted / duplicated). */
   movable: boolean;
-  /** Whether it is all a `.map` callback returns, so one instance can get its own values (`PropEdit.instance`). */
-  inLoop: boolean;
 }
 
 /**
@@ -102,11 +100,6 @@ export interface PropEdit {
   value: PropValue;
   branch?: Orientation;
   replace?: boolean;
-  /**
-   * Give only this instance of a `.map`-rendered element the value (its index in the list):
-   * `x={40}` → `x={i === 2 ? 75 : 40}`. `value` must be a number; `branch` / `replace` don't apply.
-   */
-  instance?: number;
 }
 
 /** All edits are applied to the file in one write (one HMR update). */

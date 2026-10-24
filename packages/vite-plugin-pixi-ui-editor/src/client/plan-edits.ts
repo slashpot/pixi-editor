@@ -54,7 +54,6 @@ export function sourceNumber(
  * - expression → ask: overwrite with a literal, or revert
  *
  * `instances` = live display objects rendered from this JSX element (> 1 inside a `.map`).
- * `instance` = write the changes for that one item of the `.map` only (see `PropEdit.instance`).
  */
 export function planEdits(
   info: ElementInfo,
@@ -62,7 +61,6 @@ export function planEdits(
   instances: number,
   ask: (question: string) => boolean,
   orientation: Orientation = 'portrait',
-  instance?: number,
 ): Plan {
   const plan: Plan = { edits: [], reverted: [] };
   const has = (name: string) => info.props.some((p) => p.name === name);
@@ -74,11 +72,6 @@ export function planEdits(
   }
   if (changes.some((c) => c.prop === 'x' || c.prop === 'y') && has('position')) {
     plan.blocked = 'This element is positioned with the position prop; edit it in the Inspector or the source';
-    return plan;
-  }
-  // one instance of a `.map`: its own case in the source, whatever the shared expression is
-  if (instance !== undefined) {
-    plan.edits = changes.map(({ prop, value }) => ({ prop, value, instance }));
     return plan;
   }
 

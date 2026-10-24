@@ -54,30 +54,68 @@ test.describe('writing back to the source', () => {
     await editor.expectFile(SCENE, (code) => code.includes('label="play" x={340} y={BUTTON_ROW_Y}'));
   });
 
-  test('dragging one item of a .map moves only that item', async ({ editor, page, demo }) => {
-    const original = await demo.read(SCENE);
+  test('dragging an item of a .map moves all items, and asks on release', async ({ editor }) => {
     await editor.click('item-0');
     await editor.drag('item-0', 40, 30, async () => {
-      expect(await editor.live('item-1', 'x')).toBe(40);
-      expect(await editor.live('item-1', 'y')).toBe(140);
+      // no question while dragging; the other items preview the shared move
+      expect(editor.dialogs).toEqual([]);
+      expect(await editor.live('item-1', 'x')).toBe(80);
+      expect(await editor.live('item-1', 'y')).toBe(170);
     });
-    await editor.expectFile(SCENE, (code) => code.includes('x={i === 0 ? 80 : 40} y={i === 0 ? 70 : 40 + i * 100}'));
+    expect(editor.dialogs).toEqual([expect.stringContaining('one of 3 items')]);
+    // `40 + i * 100` keeps its shape: only the number term moves
+    await editor.expectFile(SCENE, (code) => code.includes('x={80} y={70 + i * 100}'));
+    await expect.poll(() => editor.live('item-2', 'y')).toBe(270);
+    expect(await editor.live('item-0', 'x')).toBe(80);
+  });
+
+  test('cancelling that question puts every item back', async ({ editor, demo, page }) => {
+    const original = await demo.read(SCENE);
+    editor.answer = false;
+    await editor.click('item-0');
+    await editor.drag('item-0', 40, 30);
+    expect(editor.dialogs).toHaveLength(1);
+    for (const label of ['item-0', 'item-1', 'item-2']) expect(await editor.live(label, 'x')).toBe(40);
+    expect(await editor.live('item-1', 'y')).toBe(140);
+    await page.waitForTimeout(500);
+    expect(await demo.read(SCENE)).toBe(original);
+  });
+
+  test('arrow-key nudges on an item of a .map ask once the keys go quiet', async ({ editor, page }) => {
+    await editor.select('item-0');
+    for (let n = 0; n < 5; n++) await page.keyboard.press('ArrowRight');
     expect(editor.dialogs).toEqual([]);
-    await expect.poll(() => editor.live('item-0', 'y')).toBe(70);
-    expect(await editor.live('item-0', 'x')).toBe(80);
-    expect(await editor.live('item-1', 'x')).toBe(40);
-    expect(await editor.live('item-2', 'y')).toBe(240);
+    await editor.expectFile(SCENE, (code) => code.includes('x={45} y={40 + i * 100}'));
+    expect(editor.dialogs).toHaveLength(1);
+  });
 
-    // another item gets its own case; the first keeps its own
-    await editor.click('item-2');
-    await editor.drag('item-2', -20, 0);
-    await editor.expectFile(SCENE, (code) => code.includes('x={i === 2 ? 20 : i === 0 ? 80 : 40}'));
-    await expect.poll(() => editor.live('item-2', 'x')).toBe(20);
+  test('a pointerup the page never saw still ends the drag', async ({ editor, page }) => {
+    await editor.click('item-0');
+    const b = await editor.box('item-0');
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width / 2 + 40, b.y + b.height / 2, { steps: 5 });
+    // released outside the window: the next move arrives with no buttons pressed
+    await page.evaluate(
+      ({ x, y }) => window.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, buttons: 0 })),
+      { x: b.x + 300, y: b.y + 300 },
+    );
+    await editor.expectFile(SCENE, (code) => code.includes('x={80} y={40 + i * 100}'));
+    await page.mouse.move(b.x + 400, b.y + 400, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
     expect(await editor.live('item-0', 'x')).toBe(80);
+  });
 
-    await page.keyboard.press('ControlOrMeta+z');
-    await page.keyboard.press('ControlOrMeta+z');
-    await editor.expectFile(SCENE, (code) => code === original);
+  test('a press-and-drag that ends before the source is read still writes', async ({ editor, page }) => {
+    // a slow dev server: the drag is over long before the element's source arrives
+    await page.route('**/__pixi-ui-editor/element?**', async (route) => {
+      await new Promise((done) => setTimeout(done, 1000));
+      await route.continue();
+    });
+    await editor.drag('play', 40, 0);
+    await editor.expectFile(SCENE, (code) => code.includes('label="play" x={340} y={BUTTON_ROW_Y}'));
+    await expect(editor.inspector.locator('[data-error]')).toHaveCount(0);
   });
 
   test('a tiny unintended move on one axis does not touch that axis', async ({ editor }) => {
@@ -124,6 +162,27 @@ test.describe('writing back to the source', () => {
     await editor.input('style.fontSize').fill('80');
     await editor.input('style.fontSize').press('Enter');
     await editor.expectFile(SCENE, (code) => code.includes("fontSize: 80, fontWeight: 'bold', fill: '#cdd6f4'"));
+  });
+
+  test('a refresh while typing in the inspector keeps the draft and the selection', async ({ editor, demo }) => {
+    await editor.select('star');
+    const y = editor.input('y');
+    await y.fill('15');
+    await y.evaluate((el: HTMLInputElement) => el.setSelectionRange(0, 1));
+    // an IDE edit to another prop makes the inspector re-render
+    const code = await demo.read(SCENE);
+    await demo.write(
+      SCENE,
+      code.replace("texture={Texture.from('star')} x={180}", "texture={Texture.from('star')} x={190}"),
+    );
+    await expect(editor.input('x')).toHaveValue('190');
+    await expect(editor.input('y')).toBeFocused();
+    await expect(editor.input('y')).toHaveValue('15');
+    expect(await editor.input('y').evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([
+      0, 1,
+    ]);
+    await editor.input('y').press('Enter');
+    await editor.expectFile(SCENE, (next) => next.includes('x={190} y={15}'));
   });
 
   test('an edit made in the IDE shows up in the inspector', async ({ editor, demo }) => {

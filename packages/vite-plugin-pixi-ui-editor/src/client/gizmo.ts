@@ -3,7 +3,6 @@ import { displayNodes, type Entry, instanceCount, instancesOf, isShown } from '.
 import { createGridOverlay } from './grid';
 import { type ChangeMode, currentOrientation, planEdits, sourceNumber } from './plan-edits';
 import { round } from './pixi-node';
-import type { ElementInfo } from '../shared';
 import type { Session } from './session';
 import { getApp, type Point, toCss, toStage } from './viewport';
 
@@ -14,21 +13,15 @@ const NUDGE_COMMIT_MS = 500;
 /** A move smaller than this (in the parent's units) is hand jitter, not an edit of that axis. */
 const MIN_MOVE = 0.5;
 
-/** Another object rendered from the same JSX (a `.map`), with where it started. */
+/**
+ * Another object rendered from the same JSX (a `.map`), with where it started. Its position
+ * comes from the same source, so it moves along with the selection — the screen then shows
+ * what writing the source will do. Writing such a group move is confirmed on release.
+ */
 interface Follower {
   node: Container;
   x: number;
   y: number;
-}
-
-/**
- * Who a move applies to. An item a `.map` callback returns directly gets its own value
- * (`instance`: its index in the list). Otherwise all instances share the source, so they
- * move along while dragging — the screen shows what writing the source will do.
- */
-interface MoveScope {
-  instance?: number;
-  followers: Follower[];
 }
 
 interface GizmoOptions {
@@ -41,7 +34,7 @@ type Drag =
   | {
       kind: 'move';
       node: Container;
-      scope: MoveScope;
+      followers: Follower[];
       start: Point;
       startX: number;
       startY: number;
@@ -91,7 +84,7 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
   document.body.append(hoverBox, outline, label, handle);
 
   let drag: Drag | undefined;
-  let nudge: { node: Container; scope: MoveScope; startX: number; startY: number; timer: number } | undefined;
+  let nudge: { node: Container; followers: Follower[]; startX: number; startY: number; timer: number } | undefined;
   let hover: Entry | undefined;
 
   label.onclick = (e) => {
@@ -138,8 +131,13 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
     if (!drag || !app) return;
     const p = toStage(app, e.clientX, e.clientY);
     const css = toCss(app, drag.start.x, drag.start.y);
-    if (!drag.moved && Math.hypot(e.clientX - css.x, e.clientY - css.y) < DRAG_THRESHOLD) return;
-    drag.moved = true;
+    if (!drag.moved) {
+      if (Math.hypot(e.clientX - css.x, e.clientY - css.y) < DRAG_THRESHOLD) return;
+      drag.moved = true;
+    } else if (e.buttons === 0) {
+      // the button came up where we never saw it (e.g. outside the window)
+      return onUp(e);
+    }
     e.stopPropagation();
     const step = e.altKey ? 0 : snapStep();
     if (drag.kind === 'move') moveTo(drag, p, step, e.shiftKey);
@@ -164,7 +162,7 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
           { prop: 'y', from: done.startY, to: n.y, mode: 'add' },
         ],
         undefined,
-        done.scope,
+        done.followers,
       );
     } else if (done.mode === 'size') {
       void persist(n, [
@@ -182,8 +180,7 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
    * Writes the changed props back to the source, asking where planEdits needs a
    * decision. Whatever isn't written is put back on the live object.
    */
-  async function persist(node: Container, items: Item[], revertScale?: () => void, scope?: MoveScope) {
-    const followers = scope?.followers ?? [];
+  async function persist(node: Container, items: Item[], revertScale?: () => void, followers: Follower[] = []) {
     const putBack = (props: string[]) => {
       for (const i of items) if (props.includes(i.prop) && i.prop !== 'scale') setProp(node, i.prop, i.from);
       for (const f of followers) {
@@ -196,24 +193,23 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
     putBack(items.filter((i) => !moved(i)).map((i) => i.prop));
     const changed = items.filter(moved);
     if (changed.length === 0) return;
+    if (!confirmGroupMove(followers)) return putBack(changed.map((c) => c.prop));
 
-    const info = session.info;
+    // a press-and-drag on a new element can end before its source has been read
+    const info = session.info ?? (await session.loaded());
     if (!info || session.node !== node) {
       putBack(changed.map((c) => c.prop));
       return session.setError('The source has not loaded yet; reverted, please try again');
     }
 
     const orientation = currentOrientation();
-    const solo = scope?.instance;
     const changes = changed.map((i) => {
-      // a pixi object's own position is its prop; a shared expression says nothing about this item
-      const fromLive = solo !== undefined && !session.entry?.component;
-      const value = fromSource(i, fromLive ? undefined : sourceNumber(info, i.prop, orientation, i.mode));
+      const value = fromSource(i, sourceNumber(info, i.prop, orientation, i.mode));
       // positions are written as whole numbers (the Inspector takes fractions)
       if (i.mode === 'add') return { prop: i.prop, value: Math.round(value), mode: i.mode };
       return { prop: i.prop, value: i.prop === 'scale' ? round2(value) : round(value), mode: i.mode };
     });
-    const plan = planEdits(info, changes, instanceCount(info.src), (q) => window.confirm(q), orientation, solo);
+    const plan = planEdits(info, changes, instanceCount(info.src), (q) => window.confirm(q), orientation);
     if (plan.blocked) {
       putBack(changed.map((c) => c.prop));
       return session.setError(plan.blocked);
@@ -225,7 +221,7 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
 
   function flushNudge() {
     if (!nudge) return;
-    const { node, scope, startX, startY, timer } = nudge;
+    const { node, followers, startX, startY, timer } = nudge;
     clearTimeout(timer);
     nudge = undefined;
     void persist(
@@ -235,26 +231,18 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
         { prop: 'y', from: startY, to: node.y, mode: 'add' },
       ],
       undefined,
-      scope,
+      followers,
     );
   }
 
-  /** How moving the selection (rendered as `node`) is written; see MoveScope. */
-  function moveScope(node: Container): MoveScope {
+  /** The selection's sibling instances (see Follower). */
+  function followersOf(node: Container): Follower[] {
     const entry = session.entry;
-    const info = session.info;
-    if (!entry) return { followers: [] };
-    // the same JSX rendered by the same parent: the items of one list, in order
-    const items = instancesOf(entry.src).filter((e) => e.parent === entry.parent);
-    if (items.length < 2) return { followers: [] };
-    if (info?.inLoop && (!entry.component || ['x', 'y'].every((p) => hasPlainNumber(info, p)))) {
-      return { instance: items.indexOf(entry), followers: [] };
-    }
-    const followers = instancesOf(entry.src)
+    if (!entry) return [];
+    return instancesOf(entry.src)
       .map((e) => displayNodes(e)[0])
       .filter((n): n is Container => !!n && n !== node && !n.destroyed)
       .map((n) => ({ node: n, x: n.x, y: n.y }));
-    return { followers };
   }
 
   function place(box: HTMLElement, nodes: Container[]) {
@@ -304,7 +292,7 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
       drag = {
         kind: 'move',
         node,
-        scope: moveScope(node),
+        followers: followersOf(node),
         start: toStage(app, e.clientX, e.clientY),
         startX: node.x,
         startY: node.y,
@@ -318,10 +306,10 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
       const node = session.node;
       if (!node) return;
       if (nudge && nudge.node !== node) flushNudge();
-      nudge ??= { node, scope: moveScope(node), startX: node.x, startY: node.y, timer: 0 };
+      nudge ??= { node, followers: followersOf(node), startX: node.x, startY: node.y, timer: 0 };
       clearTimeout(nudge.timer);
       node.position.set(node.x + dx, node.y + dy);
-      for (const f of nudge.scope.followers) f.node.position.set(f.node.x + dx, f.node.y + dy);
+      for (const f of nudge.followers) f.node.position.set(f.node.x + dx, f.node.y + dy);
       nudge.timer = window.setTimeout(flushNudge, NUDGE_COMMIT_MS);
     },
 
@@ -345,13 +333,14 @@ export function createGizmo(session: Session, { snapStep, openInEditor }: GizmoO
   };
 }
 
-/**
- * A component's prop that is a literal or const: the same for every item, so an item's own
- * value can be derived from it (a component may map its props to positions any way it likes).
- */
-function hasPlainNumber(info: ElementInfo, prop: string) {
-  const edit = info.props.find((p) => p.name === prop)?.edit;
-  return typeof edit?.value === 'number' && (edit.via === 'literal' || edit.via === 'const');
+/** Moving one of a `.map`'s items moves all of them (they share the source): ask before writing. */
+function confirmGroupMove(followers: Follower[]) {
+  if (followers.length === 0) return true;
+  const n = followers.length + 1;
+  return window.confirm(
+    `This element is one of ${n} items drawn by the same JSX (a .map), so they share its position.\n\n` +
+      `OK: move all ${n} together\nCancel: don't move`,
+  );
 }
 
 /** The value to write: the source's number moved by the live delta / ratio, or the live value. */
@@ -375,7 +364,7 @@ function moveTo(d: MoveDrag, p: Point, step: number, lockAxis: boolean) {
   if (lockAxis && Math.abs(dx) > Math.abs(dy)) dy = 0;
   else if (lockAxis) dx = 0;
   d.node.position.set(dx === 0 ? d.startX : snap(d.startX + dx, step), dy === 0 ? d.startY : snap(d.startY + dy, step));
-  for (const f of d.scope.followers) f.node.position.set(f.x + d.node.x - d.startX, f.y + d.node.y - d.startY);
+  for (const f of d.followers) f.node.position.set(f.x + d.node.x - d.startX, f.y + d.node.y - d.startY);
 }
 
 /** Bottom-right handle; Shift keeps the aspect ratio in size mode (scale is always uniform). */
@@ -395,7 +384,7 @@ function resizeTo(d: ResizeDrag, p: Point, step: number, keepAspect: boolean) {
 function revert(d: Drag) {
   if (d.kind === 'move') {
     d.node.position.set(d.startX, d.startY);
-    for (const f of d.scope.followers) f.node.position.set(f.x, f.y);
+    for (const f of d.followers) f.node.position.set(f.x, f.y);
   } else if (d.mode === 'size') {
     d.node.width = d.startW;
     d.node.height = d.startH;

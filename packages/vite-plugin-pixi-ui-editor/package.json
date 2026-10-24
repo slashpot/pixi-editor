@@ -17,9 +17,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ericlin/pixi-ui-editor.git",
+    "url": "git+https://github.com/slashpot/pixi-editor.git",
     "directory": "packages/vite-plugin-pixi-ui-editor"
   },
+  "homepage": "https://github.com/slashpot/pixi-editor#readme",
+  "bugs": "https://github.com/slashpot/pixi-editor/issues",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

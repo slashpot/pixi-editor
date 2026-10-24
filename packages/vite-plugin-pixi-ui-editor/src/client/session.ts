@@ -16,6 +16,8 @@ export function createSession() {
   /** Remembered so the selection survives its source lines shifting (IDE edits above it). */
   let lastEntry: Entry | undefined;
   let info: ElementInfo | undefined;
+  /** The read started by the latest selection change. */
+  let selecting: Promise<void> = Promise.resolve();
   let error = '';
   let queue: Promise<unknown> = Promise.resolve();
   const listeners = new Set<() => void>();
@@ -64,7 +66,7 @@ export function createSession() {
     info = undefined;
     error = '';
     notify();
-    void load(true);
+    selecting = load(true);
   }
 
   return {
@@ -80,6 +82,12 @@ export function createSession() {
       return entry ? displayNodes(entry)[0] : undefined;
     },
     get info() {
+      return info;
+    },
+
+    /** The selection's source once its read is done (undefined if that failed or nothing is selected). */
+    async loaded() {
+      await selecting;
       return info;
     },
     get error() {

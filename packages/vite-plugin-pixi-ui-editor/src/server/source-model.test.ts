@@ -147,7 +147,7 @@ describe('applyEdit', () => {
   });
 
   it('applies several edits in one pass (const above + insert inside)', () => {
-    const { code: next } = applyEdits(CODE, FILE, ...CONTAINER, [
+    const next = applyEdits(CODE, FILE, ...CONTAINER, [
       { prop: 'y', value: 690 },
       { prop: 'x', value: 120, replace: true },
       { prop: 'alpha', value: 0.5 },

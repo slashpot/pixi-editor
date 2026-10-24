@@ -8,7 +8,6 @@ const info = (...props: PropInfo[]): ElementInfo => ({
   hash: 'h',
   props,
   movable: true,
-  inLoop: false,
 });
 const literal = (name: string, value: number): PropInfo => ({
   name,
@@ -122,7 +121,6 @@ describe('planEdits with offsets', () => {
     tag: 'pixiText',
     hash: 'h',
     movable: true,
-    inLoop: false,
     props: [
       { name: 'y', code: '{40 + i * 100}', edit: { value: 40, via: 'offset', expr: '40 + i * 100' } },
       { name: 'width', code: '{base + 10}', edit: { value: 10, via: 'offset', expr: 'base + 10' } },
@@ -141,15 +139,5 @@ describe('planEdits with offsets', () => {
     expect(sourceNumber(OFFSET, 'width', 'portrait', 'mul')).toBeUndefined();
     const plan = planEdits(OFFSET, [{ prop: 'width', value: 300, mode: 'mul' }], 1, () => false);
     expect(plan).toEqual({ edits: [], reverted: ['width'] });
-  });
-});
-
-describe('planEdits for one item of a .map', () => {
-  it('writes the change for that index only, without asking about the shared expression', () => {
-    const looped: ElementInfo = { ...info({ name: 'y', code: '{40 + i * 100}' }), inLoop: true };
-    const asked: string[] = [];
-    const plan = planEdits(looped, [{ prop: 'y', value: 70 }], 3, (q) => (asked.push(q), true), 'portrait', 0);
-    expect(plan.edits).toEqual([{ prop: 'y', value: 70, instance: 0 }]);
-    expect(asked).toEqual([]);
   });
 });

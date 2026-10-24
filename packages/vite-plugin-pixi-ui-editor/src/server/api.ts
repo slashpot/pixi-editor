@@ -44,10 +44,10 @@ export function editorApi(workspaceRoot: string, palette: PaletteTemplate[]) {
   const routes: Record<string, (body: never) => Promise<unknown>> = {
     'POST /edit': async ({ src, hash, edits }: EditRequest) => {
       const { loc, code } = await open(workspaceRoot, src, hash);
-      const done = applyEdits(code, loc.abs, loc.line, loc.col, edits);
-      await history.write(loc.abs, code, done.code);
-      const at = { ...loc, line: done.line, col: done.col };
-      return info(`${loc.file}:${done.line}:${done.col}`, done.code, at);
+      const next = applyEdits(code, loc.abs, loc.line, loc.col, edits);
+      await history.write(loc.abs, code, next);
+      // the element's own opening tag never moves when its attributes change
+      return info(src, next, loc);
     },
     'POST /insert': async (req: InsertRequest) => {
       const { loc, code } = await open(workspaceRoot, req.src, req.hash);

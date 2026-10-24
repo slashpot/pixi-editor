@@ -57,7 +57,7 @@ The file is written when you release the drag. How the new value is written back
 - **`isPortrait ? a : b`** (also `!isPortrait`, `display.isLandscape`, or a const holding such a ternary): **only the side for the current orientation** is edited.
 - **Any other expression**: the editor asks whether to replace it with a literal; if you cancel, the element snaps back. Elements rendered in a loop show how many instances share the source.
 - **The written value is computed from the source**: it is the number in your source plus the drag delta. So a component that transforms its props (`x={props.x + 10}`) still gets the right number.
-- **One item of a list** (an element a `.map` callback returns directly): only the dragged item moves. It gets its own case in the source, `x={40}` → `x={i === 0 ? 80 : 40}`; dragging it again edits that case. If the callback has no index parameter, one is added. For a component, this needs `x`/`y` to be a literal or const. Items rendered conditionally inside the callback, or in nested loops, can't be told apart reliably: those share their source, so all instances move together while you drag.
+- **An item of a list** (rendered by `.map`): all items share one JSX source, so they all move together while you drag one. When you release, the editor asks before writing: OK writes the move (a sum such as `y={40 + i * 100}` keeps its spacing), Cancel puts every item back. Arrow-key nudges ask once the keys go quiet.
 - Dragged positions are written as whole numbers. An axis that moved less than half a unit, such as hand jitter while dragging sideways, is left untouched.
 
 ### Hierarchy (left)

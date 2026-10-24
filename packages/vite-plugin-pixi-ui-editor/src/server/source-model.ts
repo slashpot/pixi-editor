@@ -11,8 +11,6 @@ import {
   splice,
   tagName,
 } from './ast';
-import { applyInstanceEdit, loopOf } from './loop';
-import type { Located } from './structure';
 import { describeValue, fieldOf, objectOf, orientationBranches, valueTarget } from './values';
 
 export { EditError, hashOf } from './ast';
@@ -47,7 +45,7 @@ export function describeElement(code: string, filename: string, line: number, co
       props.push({ name, code: slice(code, value), ...(expr ? describeValue(code, expr) : {}) });
     }
   }
-  return { tag: tagName(code, el.node), props, movable: isMovable(el), inLoop: !!loopOf(el) };
+  return { tag: tagName(code, el.node), props, movable: isMovable(el) };
 }
 
 /** Whether the element is a direct child of another JSX element / fragment. */
@@ -57,19 +55,12 @@ export function isMovable(el: NodePath<t.JSXOpeningElement>) {
 }
 
 /**
- * Applies edits one after another and reports where the element ended up. Attribute edits
- * never move the opening tag (they touch attributes after it, or a const declared on an
- * earlier line whose value never spans a newline); a per-instance edit may add an index
- * parameter before it, and says where the tag went.
+ * Applies edits one after another. Re-locating by line:col stays valid in between:
+ * edits only touch attributes after the opening tag, or a const declared on an earlier line
+ * whose value never spans a newline.
  */
-export function applyEdits(code: string, filename: string, line: number, col: number, edits: PropEdit[]): Located {
-  return edits.reduce<Located>(
-    (at, edit) =>
-      edit.instance === undefined
-        ? { ...at, code: applyEdit(at.code, filename, at.line, at.col, edit) }
-        : applyInstanceEdit(at.code, filename, at.line, at.col, edit.prop, edit.value, edit.instance),
-    { code, line, col },
-  );
+export function applyEdits(code: string, filename: string, line: number, col: number, edits: PropEdit[]) {
+  return edits.reduce((next, edit) => applyEdit(next, filename, line, col, edit), code);
 }
 
 export function applyEdit(code: string, filename: string, line: number, col: number, edit: PropEdit): string {
