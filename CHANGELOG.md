@@ -2,6 +2,8 @@
 
 ## 0.1.0 — unreleased
 
+- Editor changes are drafts: the app runs them, but nothing is written to disk until you apply them from the review panel (`Ctrl/Cmd+S` or the toolbar), which shows a diff per file. Discard drops them all; an IDE edit to a drafted file wins over its draft.
+
 - Dev-only Vite plugin with an in-browser overlay for `@pixi/react` scenes: Hierarchy, Inspector, toolbar, move / resize gizmo, snapping, portrait / landscape preview.
 - Writes every change back to the `.tsx` source as a text splice: literals, same-file consts, orientation ternaries, object fields, texture keys; insert / delete / duplicate / reorder; undo and redo.
 - Dragging an item of a `.map` list moves all items together and asks for confirmation on release.

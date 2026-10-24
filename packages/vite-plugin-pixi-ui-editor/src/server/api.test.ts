@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { API_HEADER, type ElementInfo } from '../shared';
+import { API_HEADER, type DraftFile, type ElementInfo } from '../shared';
 import { hashOf } from './ast';
 import { editorApi } from './api';
 import { DEFAULT_PALETTE } from './palette';
@@ -66,6 +66,11 @@ function defaultHeaders(method: string): Record<string, string> {
 }
 
 const fileText = () => readFile(join(root, 'src/A.tsx'), 'utf8');
+/** What the editor and the app see: the draft, else the disk. */
+const draftText = async () => {
+  const { json } = await request('GET', '/drafts');
+  return (json as DraftFile[]).find((d) => d.file === 'src/A.tsx')?.after ?? fileText();
+};
 
 describe('editorApi', () => {
   it('describes an element', async () => {
@@ -77,15 +82,48 @@ describe('editorApi', () => {
     expect(info.props).toEqual([{ name: 'x', code: '{10}', edit: { value: 10, via: 'literal' } }]);
   });
 
-  it('edits, then undoes and redoes', async () => {
+  it('edits into a draft, then undoes and redoes it', async () => {
     const edit = await request('POST', '/edit', { src: SPRITE, hash: hashOf(CODE), edits: [{ prop: 'x', value: 42 }] });
     expect(edit.status).toBe(200);
-    expect(await fileText()).toContain('<pixiSprite x={42} />');
+    expect(await draftText()).toContain('<pixiSprite x={42} />');
+    expect(await fileText()).toBe(CODE);
 
     expect((await request('POST', '/undo', {})).json).toEqual({ file: 'src/A.tsx' });
-    expect(await fileText()).toBe(CODE);
+    expect((await request('GET', '/drafts')).json).toEqual([]);
     await request('POST', '/redo', {});
+    expect(await draftText()).toContain('<pixiSprite x={42} />');
+    expect(await fileText()).toBe(CODE);
+  });
+
+  it('reads the draft: the next edit carries its hash and describes it', async () => {
+    await request('POST', '/edit', { src: SPRITE, hash: hashOf(CODE), edits: [{ prop: 'x', value: 42 }] });
+    const { json } = await request('GET', `/element?src=${encodeURIComponent(SPRITE)}`);
+    expect((json as ElementInfo).props[0].edit?.value).toBe(42);
+    const again = await request('POST', '/edit', { src: SPRITE, hash: json.hash, edits: [{ prop: 'x', value: 43 }] });
+    expect(again.status).toBe(200);
+    expect(await draftText()).toContain('<pixiSprite x={43} />');
+  });
+
+  it('applies drafts to disk', async () => {
+    await request('POST', '/edit', { src: SPRITE, hash: hashOf(CODE), edits: [{ prop: 'x', value: 42 }] });
+    expect((await request('GET', '/drafts')).json).toEqual([
+      { file: 'src/A.tsx', before: CODE, after: CODE.replace('x={10}', 'x={42}') },
+    ]);
+    expect((await request('POST', '/apply', {})).json).toEqual({ files: ['src/A.tsx'] });
     expect(await fileText()).toContain('<pixiSprite x={42} />');
+    expect((await request('GET', '/drafts')).json).toEqual([]);
+
+    // undo after applying drafts the revert; the disk keeps the applied edit
+    await request('POST', '/undo', {});
+    expect(await draftText()).toBe(CODE);
+    expect(await fileText()).toContain('<pixiSprite x={42} />');
+  });
+
+  it('discards drafts, and with them the undo history', async () => {
+    await request('POST', '/edit', { src: SPRITE, hash: hashOf(CODE), edits: [{ prop: 'x', value: 42 }] });
+    expect((await request('POST', '/discard', {})).json).toEqual({ files: ['src/A.tsx'] });
+    expect(await draftText()).toBe(CODE);
+    expect((await request('POST', '/undo', {})).status).toBe(400);
   });
 
   it('answers 409 when the file changed since it was read', async () => {
@@ -126,8 +164,8 @@ describe('editorApi', () => {
       x: 1.4,
       y: 2,
     });
-    expect(insert.json).toEqual({ src: 'src/A.tsx:4:5', hash: hashOf(await fileText()) });
-    expect(await fileText()).toContain('    <pixiSprite x={10} />\n    <pixiContainer x={1} y={2} />\n');
+    expect(insert.json).toEqual({ src: 'src/A.tsx:4:5', hash: hashOf(await draftText()) });
+    expect(await draftText()).toContain('    <pixiSprite x={10} />\n    <pixiContainer x={1} y={2} />\n');
   });
 
   it('reports unknown endpoints', async () => {

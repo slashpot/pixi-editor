@@ -170,8 +170,32 @@ export class Editor {
     await expect(this.inspector.locator('[data-prop]').first()).toBeVisible();
   }
 
-  /** Waits until `file` in the demo satisfies `check`. */
+  /** What the app is served for `file`: the editor's draft, else the file on disk. */
+  async source(file: string) {
+    const res = await this.page.request.get(`${this.demo.url}__pixi-ui-editor/drafts`, {
+      headers: { 'x-pixi-ui-editor': '1' },
+    });
+    const drafts: { file: string; after: string }[] = await res.json();
+    return drafts.find((d) => d.file === file)?.after ?? this.demo.read(file);
+  }
+
+  /** Waits until the source of `file` (draft or disk) satisfies `check`. */
+  async expectSource(file: string, check: (code: string) => boolean) {
+    await expect.poll(() => this.source(file).then(check)).toBe(true);
+  }
+
+  /** Waits until `file` on disk satisfies `check`. */
   async expectFile(file: string, check: (code: string) => boolean) {
     await expect.poll(() => this.demo.read(file).then(check)).toBe(true);
+  }
+
+  /** The toolbar's unapplied-changes button. */
+  get changes() {
+    return this.toolbar.locator('[data-drafts]');
+  }
+
+  /** The panel listing unapplied changes. */
+  get review() {
+    return this.page.locator('[data-pixi-ui-editor="review"]');
   }
 }

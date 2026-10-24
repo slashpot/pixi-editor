@@ -1,8 +1,8 @@
-import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { relative, resolve, sep } from 'node:path';
 import {
   API_HEADER,
+  type DraftFile,
   type EditRequest,
   type ElementInfo,
   type InsertRequest,
@@ -10,6 +10,7 @@ import {
   type StructureResult,
 } from '../shared';
 import { EditError, hashOf } from './ast';
+import { createDrafts, type Drafts } from './drafts';
 import { createHistory } from './history';
 import { findTemplate, type PaletteTemplate, paletteItems } from './palette';
 import { applyEdits, describeElement } from './source-model';
@@ -22,7 +23,8 @@ interface SrcRequest {
 
 /**
  * Connect middleware mounted at API_BASE. Every write goes through `history`
- * (undo / redo); Vite's watcher + Fast Refresh then update the app.
+ * (undo / redo) into `drafts`, which the dev server serves instead of the disk;
+ * nothing reaches the disk until `/apply`.
  *
  * Every request must carry the `API_HEADER` header (and POSTs a JSON content type).
  * A custom header can't be sent cross-origin without a CORS preflight, which the
@@ -37,20 +39,24 @@ interface SrcRequest {
  *   POST /move       MoveRequest                   → StructureResult (the moved element)
  *   POST /remove     { src, hash }                 → { hash }
  *   POST /undo, /redo                              → { file }
+ *   GET  /drafts                                   → DraftFile[] (files with unapplied edits)
+ *   POST /apply                                    → { files } written to disk
+ *   POST /discard                                  → { files } whose drafts were dropped
  */
-export function editorApi(workspaceRoot: string, palette: PaletteTemplate[]) {
-  const history = createHistory();
+export function editorApi(workspaceRoot: string, palette: PaletteTemplate[], drafts: Drafts = createDrafts()) {
+  const history = createHistory(drafts);
+  const rel = (file: string) => relative(workspaceRoot, file).split(sep).join('/');
 
   const routes: Record<string, (body: never) => Promise<unknown>> = {
     'POST /edit': async ({ src, hash, edits }: EditRequest) => {
-      const { loc, code } = await open(workspaceRoot, src, hash);
+      const { loc, code } = await open(src, hash);
       const next = applyEdits(code, loc.abs, loc.line, loc.col, edits);
       await history.write(loc.abs, code, next);
       // the element's own opening tag never moves when its attributes change
       return info(src, next, loc);
     },
     'POST /insert': async (req: InsertRequest) => {
-      const { loc, code } = await open(workspaceRoot, req.src, req.hash);
+      const { loc, code } = await open(req.src, req.hash);
       const tpl = findTemplate(palette, req.kind);
       if (tpl.needsTexture && !req.texture) throw new EditError('Choose a texture first');
       const jsx = tpl.jsx({ x: Math.round(req.x), y: Math.round(req.y), texture: req.texture ?? '' });
@@ -58,26 +64,42 @@ export function editorApi(workspaceRoot: string, palette: PaletteTemplate[]) {
       return written(code, done, loc);
     },
     'POST /duplicate': async ({ src, hash }: SrcRequest) => {
-      const { loc, code } = await open(workspaceRoot, src, hash);
+      const { loc, code } = await open(src, hash);
       return written(code, duplicateElement(code, loc.abs, loc.line, loc.col), loc);
     },
     'POST /move': async (req: MoveRequest) => {
-      const { loc, code } = await open(workspaceRoot, req.src, req.hash);
+      const { loc, code } = await open(req.src, req.hash);
       const to = parseSrc(workspaceRoot, req.target);
       if (to.abs !== loc.abs)
         throw new EditError('Elements can only be moved within the same file (another file is another component)');
       return written(code, moveElement(code, loc.abs, loc, to, req.placement), loc);
     },
     'POST /remove': async ({ src, hash }: SrcRequest) => {
-      const { loc, code } = await open(workspaceRoot, src, hash);
+      const { loc, code } = await open(src, hash);
       const next = removeElement(code, loc.abs, loc.line, loc.col);
       await history.write(loc.abs, code, next);
       return { hash: hashOf(next) };
     },
-    'POST /undo': async () => ({ file: relative(workspaceRoot, await history.undo()) }),
-    'POST /redo': async () => ({ file: relative(workspaceRoot, await history.redo()) }),
+    'POST /undo': async () => ({ file: rel(await history.undo()) }),
+    'POST /redo': async () => ({ file: rel(await history.redo()) }),
+    'GET /drafts': async (): Promise<DraftFile[]> =>
+      drafts.list().map(({ file, base, code }) => ({ file: rel(file), before: base, after: code })),
+    'POST /apply': async () => ({ files: (await drafts.apply()).map(rel) }),
+    'POST /discard': async () => {
+      // the steps no longer match what the files hold
+      history.clear();
+      return { files: drafts.discard().map(rel) };
+    },
     'GET /palette': async () => paletteItems(palette),
   };
+
+  async function open(src: string, hash: string) {
+    const loc = parseSrc(workspaceRoot, src);
+    const code = await drafts.read(loc.abs);
+    if (hashOf(code) !== hash)
+      throw new ConflictError('The file was changed elsewhere and has been reloaded; please try again');
+    return { loc, code };
+  }
 
   async function written(before: string, done: Located, loc: Loc): Promise<StructureResult> {
     await history.write(loc.abs, before, done.code);
@@ -95,7 +117,7 @@ export function editorApi(workspaceRoot: string, palette: PaletteTemplate[]) {
       if (req.method === 'GET' && url.pathname === '/element') {
         const src = url.searchParams.get('src') ?? '';
         const loc = parseSrc(workspaceRoot, src);
-        return send(res, 200, info(src, await readFile(loc.abs, 'utf8'), loc));
+        return send(res, 200, info(src, await drafts.read(loc.abs), loc));
       }
       const route = routes[`${req.method} ${url.pathname}`];
       if (!route) return send(res, 404, { error: `unknown endpoint ${req.method} ${url.pathname}` });
@@ -111,14 +133,6 @@ type Loc = ReturnType<typeof parseSrc>;
 
 function info(src: string, code: string, loc: Loc): ElementInfo {
   return { src, hash: hashOf(code), ...describeElement(code, loc.abs, loc.line, loc.col) };
-}
-
-async function open(workspaceRoot: string, src: string, hash: string) {
-  const loc = parseSrc(workspaceRoot, src);
-  const code = await readFile(loc.abs, 'utf8');
-  if (hashOf(code) !== hash)
-    throw new ConflictError('The file was changed elsewhere and has been reloaded; please try again');
-  return { loc, code };
 }
 
 /** "src/Foo.tsx:12:7" → absolute path; refuses anything outside the workspace or not JSX. */

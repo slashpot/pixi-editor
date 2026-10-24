@@ -4,6 +4,7 @@ import { createGizmo } from './gizmo';
 import { createHierarchy } from './hierarchy';
 import { confirmRemove, createInspector } from './inspector';
 import { setPreviewRoot } from './preview';
+import { createReview } from './review';
 import { createSession } from './session';
 import { createToolbar } from './toolbar';
 import { getApp, hitStack, installAppHook, toStage } from './viewport';
@@ -44,7 +45,9 @@ export function start({ workspaceRoot, appRoot, queryParam, previewRoot }: Clien
       onSelectingChange: (on) => !on && session.select(undefined),
       undo: () => session.undo(),
       redo: () => session.redo(),
+      review: () => review.open(),
     });
+    const review = createReview(session, { onFiles: (files) => toolbar.setDrafts(files.length) });
 
     // window capture runs before Pixi's own listeners on the canvas / document;
     // stopPropagation (not Immediate) so the gizmo's window listeners still run
@@ -86,6 +89,10 @@ export function start({ workspaceRoot, appRoot, queryParam, previewRoot }: Clien
         return true;
       }
       if (mod && key === 'y') return !!session.redo();
+      if (mod && key === 's') {
+        review.open();
+        return true;
+      }
       if (!session.ref) return false;
       if (mod && key === 'd') return !!session.duplicate();
       if (key === 'delete' || key === 'backspace') {

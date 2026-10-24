@@ -3,7 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { type Plugin, searchForWorkspaceRoot } from 'vite';
 import { DEFAULT_PALETTE, type PaletteTemplate } from './server/palette';
 import { editorApi } from './server/api';
-import { API_BASE, type ClientConfig, DEFAULT_QUERY_PARAM } from './shared';
+import { createDrafts, type Drafts } from './server/drafts';
+import { API_BASE, type ClientConfig, DEFAULT_QUERY_PARAM, DRAFTS_EVENT, type DraftsEvent } from './shared';
 import { tagJsx } from './tag-jsx';
 
 export interface PixiUiEditorOptions {
@@ -37,6 +38,7 @@ export function pixiUiEditor(options: PixiUiEditorOptions = {}): Plugin {
   let workspaceRoot = '';
   let client: ClientConfig;
   let base = '/';
+  let drafts: Drafts | undefined;
 
   return {
     name: 'pixi-ui-editor',
@@ -58,7 +60,22 @@ export function pixiUiEditor(options: PixiUiEditorOptions = {}): Plugin {
     },
 
     configureServer(server) {
-      server.middlewares.use(API_BASE, editorApi(workspaceRoot, palette));
+      const env = server.environments.client;
+      const rel = (file: string) => relative(workspaceRoot, file).split(sep).join('/');
+      const store = createDrafts({
+        reload(file) {
+          for (const mod of env.moduleGraph.getModulesByFile(file) ?? []) void env.reloadModule(mod);
+        },
+        changed() {
+          env.hot.send(DRAFTS_EVENT, { files: store.list().map((d) => rel(d.file)) } satisfies DraftsEvent);
+        },
+      });
+      drafts = store;
+      // the IDE (or git) wins over a draft of the same file
+      for (const event of ['change', 'unlink'] as const) {
+        server.watcher.on(event, (file) => void store.diskChanged(file));
+      }
+      server.middlewares.use(API_BASE, editorApi(workspaceRoot, palette, store));
     },
 
     transform: {
@@ -78,8 +95,13 @@ export function pixiUiEditor(options: PixiUiEditorOptions = {}): Plugin {
     },
 
     load(id) {
-      if (id !== RESOLVED_CLIENT_ID) return;
-      return [`import { start } from ${JSON.stringify(CLIENT_ENTRY)};`, `start(${JSON.stringify(client)});`].join('\n');
+      if (id === RESOLVED_CLIENT_ID) {
+        return [`import { start } from ${JSON.stringify(CLIENT_ENTRY)};`, `start(${JSON.stringify(client)});`].join(
+          '\n',
+        );
+      }
+      // a file with unapplied editor edits: the app runs the draft, the disk stays untouched
+      if (drafts?.has(id)) return drafts.served(id);
     },
 
     transformIndexHtml() {

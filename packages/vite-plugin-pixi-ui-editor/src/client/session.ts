@@ -157,6 +157,11 @@ export function createSession() {
     undo: () => enqueue(() => api.undo().then(() => load(true)), false),
     redo: () => enqueue(() => api.redo().then(() => load(true)), false),
 
+    /** Writes every draft to disk (after the writes queued before it). */
+    apply: () => enqueue(() => api.applyDrafts().then(() => load(true)), false),
+    /** Drops every draft: the app goes back to what's on disk. */
+    discard: () => enqueue(() => api.discardDrafts().then(() => load(true)), false),
+
     setError(message: string) {
       error = message;
       notify();

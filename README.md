@@ -4,6 +4,8 @@ A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-re
 
 **Your `.tsx` source stays the single source of truth.** Every editor action is a small, local rewrite of the source file, and Vite HMR updates the screen. Edits you make in your IDE show up in the editor too.
 
+**Nothing touches your files until you confirm.** Editor changes are kept as a draft on the dev server: the app runs the draft, while the files on disk stay as they were. Review the diff and apply it (or discard it) from the toolbar.
+
 - Runs only on the dev server. `vite build` output contains no editor code and no source tags.
 - Your app needs nothing beyond `vite`, `pixi.js` and `@pixi/react`. The parser the plugin uses is bundled into it.
 - Works with `@vitejs/plugin-react` (Babel, React Compiler) and `@vitejs/plugin-react-swc`.
@@ -48,8 +50,9 @@ While select mode is on (`F2` toggles it), pointer input on the canvas goes to t
 | Arrow keys                       | Nudge by 1px (`Shift`: 10px). The change is written once the keys go quiet for 0.5s.                                                                                                             |
 | `Delete` / `Ctrl/Cmd+D`          | Deletes (after confirming) / duplicates.                                                                                                                                                         |
 | `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` | Undo / redo. These only cover changes the editor made.                                                                                                                                           |
+| `Ctrl/Cmd+S`                     | Opens the review of unapplied changes (see [Drafts](#drafts)).                                                                                                                                   |
 
-The file is written when you release the drag. How the new value is written back:
+The change is drafted when you release the drag. How the new value is written back:
 
 - **A literal, or a prop that isn't set yet**: changed or inserted in place.
 - **A same-file `const`** (`y={popupY}`): the const is edited. If several places read it, the editor asks whether to move them all or to replace only this one with a literal.
@@ -82,9 +85,19 @@ The Inspector also has Duplicate and Delete buttons, and **Add prop**, which ins
 
 ### Toolbar (bottom right)
 
+- **● N unapplied**: opens the review of drafted changes (see below).
 - Undo / redo and the select-mode toggle.
 - **Snap**: while dragging, positions snap to a grid in the parent's coordinates, and the grid is drawn.
 - **Preview**: portrait 9:16 or landscape 16:9. This boxes the root element (`#root` by default) to that ratio and makes `window.innerWidth/innerHeight` report the box size, so your layout code reacts as it would on such a device. The chosen preview is kept across reloads.
+
+### Drafts
+
+Every change the editor makes, from a drag to a delete, goes into a draft first. The dev server serves the drafted text instead of the file on disk, so the app (and a page reload) shows your edits while your files stay untouched.
+
+- The review panel (`Ctrl/Cmd+S`, or the toolbar's **● N unapplied** button) shows a diff per changed file.
+- **Apply to source** writes every draft to disk. **Discard all** drops them all (after confirming) and the app goes back to your files.
+- Undo / redo work on the draft. After applying, an undo drafts the revert; it doesn't touch the disk either.
+- If a drafted file changes on disk (you edit it in your IDE, or `git checkout`), the disk wins: that file's draft is dropped and the app reloads it.
 
 ## Options
 
@@ -118,10 +131,11 @@ The default palette inserts `pixiContainer`, `pixiSprite`, `pixiText` and `pixiG
 1. **Source tags** (`src/tag-jsx.ts`). A `pre` transform adds `__src="file:line:col"` to every pixi intrinsic JSX element (`<pixiSprite>`, `<layoutContainer>`, …). It also tags every component that is defined in the same file or imported from your own code; code that resolves into `node_modules` is never tagged. `@pixi/react` copies the attribute onto the Pixi object, while components keep it in their React props.
 2. **Fiber index** (`src/client/fiber-index.ts`). The overlay script is injected at the very top of `<head>`, so it installs the React DevTools hook before `@pixi/react` loads. Walking the fiber tree maps each Pixi object on screen to its JSX element (including component call sites) and builds the Hierarchy.
 3. **Dev-server API** (`src/server/`). The server locates elements with a Babel AST and edits the file by **splicing text**: only the edited value changes, and formatting and comments are kept byte for byte. Every write carries a hash of the file, so a file changed elsewhere is never overwritten. Every write is also recorded for undo; an undo is refused if the file was changed outside the editor in the meantime.
+4. **Drafts** (`src/server/drafts.ts`). Writes land in an in-memory draft instead of on disk. The plugin's `load` hook serves a drafted file's text, and HMR reloads its module, so the app runs the draft. Applying writes the drafts to disk; a file changed on disk drops its draft.
 
 ## Security
 
-The editor's API rewrites files under `root`. Its safeguards:
+The editor's API rewrites files under `root` (when you apply drafts). Its safeguards:
 
 - Requests must carry a custom header, so other websites can't call the API through your browser; that would need a CORS preflight, which the dev server doesn't grant them.
 - Writes are limited to `.jsx`/`.tsx` files inside `root`, and never under `node_modules`.
@@ -135,7 +149,7 @@ If you expose the dev server to your network (`vite --host`), **anyone who can r
 - Moving an element across files is not supported, because another file is another component. An element that sits in a conditional, in a `.map`, or at the top of a `return` cannot be moved, deleted or duplicated; the editor tells you so.
 - Elements with a `{...spread}`, or positioned with the `position` prop, can't be written back by dragging. Object fields can be edited but not added.
 - Resizing scales around the anchor/pivot. The preview only overrides `innerWidth/innerHeight` and the root element, so code that reads `screen.*` or `matchMedia` won't follow it.
-- Undo history lives in dev-server memory and is cleared when the server restarts.
+- Undo history and unapplied drafts live in dev-server memory: restarting the dev server (which Vite also does when `vite.config` changes) loses them. Apply before you restart.
 
 ## Roadmap
 

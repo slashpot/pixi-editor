@@ -13,14 +13,16 @@ interface ToolbarOptions {
   onSelectingChange(selecting: boolean): void;
   undo(): void;
   redo(): void;
+  /** Opens the panel of unapplied changes (see review.ts). */
+  review(): void;
 }
 
 /**
- * Bottom-right bar: undo / redo, select-mode toggle (F2), snap step, and orientation preview
+ * Bottom-right bar: unapplied changes, undo / redo, select-mode toggle (F2), snap step, and orientation preview
  * (see preview.ts). Snap and preview are remembered per browser, so an app that
  * reloads on orientation change comes back in the chosen preview.
  */
-export function createToolbar({ onSelectingChange, undo, redo }: ToolbarOptions) {
+export function createToolbar({ onSelectingChange, undo, redo, review }: ToolbarOptions) {
   const settings = loadSettings();
   let selecting = true;
 
@@ -58,7 +60,8 @@ export function createToolbar({ onSelectingChange, undo, redo }: ToolbarOptions)
   );
   const undoButton = button('↶', 'Undo (Ctrl/Cmd+Z)', undo);
   const redoButton = button('↷', 'Redo (Ctrl/Cmd+Shift+Z)', redo);
-  bar.append(undoButton, redoButton, toggle, snap, preview);
+  const changes = button('', 'Review and apply the changes to the source files (Ctrl/Cmd+S)', review);
+  bar.append(changes, undoButton, redoButton, toggle, snap, preview);
   document.body.append(bar);
 
   window.addEventListener('keydown', (e) => {
@@ -69,6 +72,7 @@ export function createToolbar({ onSelectingChange, undo, redo }: ToolbarOptions)
   });
   applyPreview(settings.preview);
   setSelecting(true);
+  setDrafts(0);
 
   function applyPreview(mode: Preview) {
     // leave room for the hierarchy (left), inspector (right) and this bar (bottom)
@@ -82,7 +86,15 @@ export function createToolbar({ onSelectingChange, undo, redo }: ToolbarOptions)
     onSelectingChange(on);
   }
 
+  /** `count` files have edits that aren't on disk yet. */
+  function setDrafts(count: number) {
+    changes.textContent = count ? `● ${count} unapplied` : 'No changes';
+    changes.dataset.drafts = String(count);
+    changes.style.background = count ? '#e8590c' : '#444';
+  }
+
   return {
+    setDrafts,
     get selecting() {
       return selecting;
     },

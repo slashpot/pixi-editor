@@ -1,6 +1,7 @@
 import {
   API_BASE,
   API_HEADER,
+  type DraftFile,
   type EditRequest,
   type ElementInfo,
   type InsertRequest,
@@ -28,6 +29,9 @@ export const moveElement = (req: MoveRequest) => post<StructureResult>('/move', 
 export const removeElement = (req: { src: string; hash: string }) => post<{ hash: string }>('/remove', req);
 export const undo = () => post<{ file: string }>('/undo', {});
 export const redo = () => post<{ file: string }>('/redo', {});
+export const fetchDrafts = () => get<DraftFile[]>('/drafts');
+export const applyDrafts = () => post<{ files: string[] }>('/apply', {});
+export const discardDrafts = () => post<{ files: string[] }>('/discard', {});
 
 function get<T>(path: string) {
   return call<T>(path, { headers: { [API_HEADER]: '1' } });

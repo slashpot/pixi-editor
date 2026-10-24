@@ -18,6 +18,24 @@ export const API_BASE = '/__pixi-ui-editor';
 /** Header every API request must carry (lower-case, as Node reports it); see server/api.ts. */
 export const API_HEADER = 'x-pixi-ui-editor';
 
+/** HMR event the dev server sends whenever the set of drafted files changes; payload `DraftsEvent`. */
+export const DRAFTS_EVENT = 'pixi-ui-editor:drafts';
+
+export interface DraftsEvent {
+  /** Workspace-relative paths of the files with unapplied edits. */
+  files: string[];
+}
+
+/** A file the editor changed but hasn't written to disk yet. */
+export interface DraftFile {
+  /** Workspace-relative path. */
+  file: string;
+  /** On disk. */
+  before: string;
+  /** In the draft (what the app is served). */
+  after: string;
+}
+
 /** What the plugin hands the client's `start()`. */
 export interface ClientConfig {
   /** Absolute path that `__src` paths are relative to. */
