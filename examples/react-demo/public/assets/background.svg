@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- a vignette: the swirl filter on the background sprite is multiplied by it -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#313244"/>
-      <stop offset="1" stop-color="#1e1e2e"/>
-    </linearGradient>
+    <radialGradient id="v" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.45" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#5a5a5a"/>
+    </radialGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#g)"/>
-  <g fill="none" stroke="#45475a" stroke-width="2">
-    <path d="M0 128H512M0 256H512M0 384H512M128 0V512M256 0V512M384 0V512"/>
-  </g>
+  <rect width="512" height="512" fill="url(#v)"/>
 </svg>
