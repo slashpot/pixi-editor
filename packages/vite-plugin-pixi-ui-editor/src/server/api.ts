@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { relative, resolve, sep } from 'node:path';
 import {
@@ -135,15 +136,32 @@ function info(src: string, code: string, loc: Loc): ElementInfo {
   return { src, hash: hashOf(code), ...describeElement(code, loc.abs, loc.line, loc.col) };
 }
 
-/** "src/Foo.tsx:12:7" → absolute path; refuses anything outside the workspace or not JSX. */
+/**
+ * "src/Foo.tsx:12:7" → absolute path; refuses anything outside the workspace or not JSX,
+ * also when a symlink inside the workspace points elsewhere.
+ */
 function parseSrc(workspaceRoot: string, src: string) {
   const m = /^(.+):(\d+):(\d+)$/.exec(src);
   if (!m) throw new EditError(`Invalid src: ${src}`);
   const abs = resolve(workspaceRoot, m[1]);
-  if (!abs.startsWith(workspaceRoot + sep) || !/\.[jt]sx$/.test(abs) || abs.includes(`${sep}node_modules${sep}`)) {
+  const real = realOf(abs);
+  if (!allowed(workspaceRoot, abs) || (real && !allowed(realOf(workspaceRoot) ?? workspaceRoot, real))) {
     throw new EditError(`Not allowed to edit: ${m[1]}`);
   }
   return { file: m[1], abs, line: Number(m[2]), col: Number(m[3]) };
+}
+
+function allowed(root: string, file: string) {
+  return file.startsWith(root + sep) && /\.[jt]sx$/.test(file) && !file.includes(`${sep}node_modules${sep}`);
+}
+
+/** The path with symlinks resolved; undefined when it doesn't exist (reading it fails later). */
+function realOf(path: string) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
 }
 
 class ConflictError extends Error {}

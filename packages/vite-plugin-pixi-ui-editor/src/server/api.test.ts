@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -140,6 +140,18 @@ describe('editorApi', () => {
   ])('refuses a src %s', async (_label, src) => {
     const { status } = await request('GET', `/element?src=${encodeURIComponent(src)}`);
     expect(status).toBe(400);
+  });
+
+  it('refuses a symlink that points outside the workspace', async () => {
+    const outside = await realpath(await mkdtemp(join(tmpdir(), 'pixi-ui-editor-outside-')));
+    try {
+      await writeFile(join(outside, 'C.tsx'), CODE);
+      await symlink(join(outside, 'C.tsx'), join(root, 'src/Link.tsx'));
+      const { status } = await request('GET', `/element?src=${encodeURIComponent('src/Link.tsx:3:5')}`);
+      expect(status).toBe(400);
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
   });
 
   it('refuses requests without the editor header, or POSTs that are not JSON', async () => {

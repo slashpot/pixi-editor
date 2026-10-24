@@ -10,13 +10,23 @@ A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-re
 - Your app needs nothing beyond `vite`, `pixi.js` and `@pixi/react`. The parser the plugin uses is bundled into it.
 - Works with `@vitejs/plugin-react` (Babel, React Compiler) and `@vitejs/plugin-react-swc`.
 
+## Try it online
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/slashpot/pixi-editor?file=examples/react-demo/src/Scene.tsx)
+
+This runs the demo's dev server in your browser; no account is needed.
+
+- The first start takes a while, because it installs the dependencies and builds the plugin.
+- Press **Open editor** in the scene (or add `?editor` to the preview URL) to open the editor. When you apply your changes, they are written to the files in the StackBlitz editor next to the preview.
+- Keyboard shortcuts such as `Ctrl/Cmd+S` only work while the preview has focus. Click the preview first.
+
 ## Install
 
 ```bash
 npm i -D vite-plugin-pixi-ui-editor
 ```
 
-Peer dependencies: `vite` 6, 7 or 8, `pixi.js` 8, and `@pixi/react` 8.
+Peer dependencies: `vite` 6 (6.0.9 or later), 7 or 8, `pixi.js` 8, and `@pixi/react` 8.
 
 ```ts
 // vite.config.ts
@@ -41,16 +51,18 @@ The screen has three parts: the **Hierarchy** on the left, the **Inspector** on 
 
 While select mode is on (`F2` toggles it), pointer input on the canvas goes to the editor instead of the app.
 
-| Action                           | Effect                                                                                                                                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Click                            | Selects the JSX element under the pointer. A click on a reusable component (one called from more than one place, such as a `<Button>`) selects the **call site**, not the component's internals. |
-| Click the same spot again        | Drills one level deeper, for example into `Button.tsx`.                                                                                                                                          |
-| Drag                             | Moves the selection; you can press anywhere inside it. `Shift` locks the axis, `Alt` suspends snapping, `Esc` cancels.                                                                           |
-| White handle at the bottom right | Resizes. If the element sets `width`/`height`, those are edited (`Shift` keeps the aspect ratio); otherwise `scale` is.                                                                          |
-| Arrow keys                       | Nudge by 1px (`Shift`: 10px). The change is written once the keys go quiet for 0.5s.                                                                                                             |
-| `Delete` / `Ctrl/Cmd+D`          | Deletes (after confirming) / duplicates.                                                                                                                                                         |
-| `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` | Undo / redo. These only cover changes the editor made.                                                                                                                                           |
-| `Ctrl/Cmd+S`                     | Opens the review of unapplied changes (see [Drafts](#drafts)).                                                                                                                                   |
+| Action                                           | Effect                                                                                                                                                                                           |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Click                                            | Selects the JSX element under the pointer. A click on a reusable component (one called from more than one place, such as a `<Button>`) selects the **call site**, not the component's internals. |
+| Click the same spot again                        | Drills one level deeper, for example into `Button.tsx`.                                                                                                                                          |
+| Drag                                             | Moves the selection; you can press anywhere inside it. `Shift` locks the axis, `Alt` suspends snapping, `Esc` cancels.                                                                           |
+| White handle at the bottom right                 | Resizes. If the element sets `width`/`height`, those are edited (`Shift` keeps the aspect ratio); otherwise `scale` is.                                                                          |
+| Arrow keys                                       | Nudge by 1px (`Shift`: 10px). The change is written once the keys go quiet for 0.5s.                                                                                                             |
+| `Delete` or `Backspace` / `Ctrl/Cmd+D`           | Deletes (after confirming) / duplicates.                                                                                                                                                         |
+| `Esc`                                            | Clears the selection (during a drag, cancels the drag instead).                                                                                                                                  |
+| `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` or `Ctrl/Cmd+Y` | Undo / redo. These only cover changes the editor made.                                                                                                                                           |
+| The selection's label on the canvas              | Click it to open the element's source in your IDE.                                                                                                                                               |
+| `Ctrl/Cmd+S`                                     | Opens the review of unapplied changes (see [Drafts](#drafts)).                                                                                                                                   |
 
 The change is drafted when you release the drag. How the new value is written back:
 
@@ -138,9 +150,14 @@ The default palette inserts `pixiContainer`, `pixiSprite`, `pixiText` and `pixiG
 The editor's API rewrites files under `root` (when you apply drafts). Its safeguards:
 
 - Requests must carry a custom header, so other websites can't call the API through your browser; that would need a CORS preflight, which the dev server doesn't grant them.
-- Writes are limited to `.jsx`/`.tsx` files inside `root`, and never under `node_modules`.
+- Vite's host check (`server.allowedHosts`) runs before the API, which blocks DNS rebinding.
+- Writes are limited to `.jsx`/`.tsx` files inside `root`, and never under `node_modules`. A symlink that points outside `root` is refused.
+
+These safeguards rely on Vite's defaults. Setting `server.cors: true` (or a CORS `origin` that lets other sites in) or `server.allowedHosts: true` turns them off, and any website you visit could then edit your files.
 
 If you expose the dev server to your network (`vite --host`), **anyone who can reach it can edit those files**. Only do that on networks you trust.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Known limitations
 

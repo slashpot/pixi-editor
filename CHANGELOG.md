@@ -13,5 +13,6 @@
 - Dragged positions are written as whole numbers; sub-unit jitter on the other axis is ignored.
 - Source tagging runs as a Vite transform, so it works with both `@vitejs/plugin-react` and `@vitejs/plugin-react-swc`, and with React Compiler.
 - No runtime dependencies besides the `vite`, `pixi.js` and `@pixi/react` peers.
-- The dev-server API requires a custom header, which blocks cross-site requests.
+- The dev-server API requires a custom header, which blocks cross-site requests. It refuses symlinks that point outside `root`.
+- Requires Vite 6.0.9 or later in the 6.x line: earlier 6.x releases let any website pass the CORS preflight.
 - Options: `queryParam`, `root`, `palette`, `previewRoot`.
