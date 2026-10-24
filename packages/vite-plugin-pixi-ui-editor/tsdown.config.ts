@@ -17,7 +17,8 @@ export default defineConfig([
     format: 'esm',
     target: 'node20',
     fixedExtension: false,
-    dts: true,
+    // the .d.ts parser has no WebAssembly build, so StackBlitz (WebContainer) can't run it; the demo doesn't need types
+    dts: !process.versions.webcontainer,
     clean: true,
     deps: { neverBundle: ['vite'], onlyImport: ['vite'], onlyBundle: false },
     plugins: [thirdPartyLicenses],

@@ -24,6 +24,15 @@ pnpm --filter e2e exec playwright install chromium   # once, for the e2e tests
 
 The plugin builds into two bundles: `dist/index.js` (Node; Babel and magic-string are bundled in) and `dist/client.js` (browser). The build fails if either one imports anything other than `vite` (Node built-ins are fine) or `pixi.js`, respectively. That check keeps users' dependency trees clean, so don't add runtime dependencies. A devDependency that gets bundled is fine, as long as its license is permissive; the build lists every bundled package in `dist/THIRD_PARTY_LICENSES.md`.
 
+## StackBlitz
+
+The README's "Open in StackBlitz" link runs `pnpm build && pnpm dev` in a WebContainer (see `.stackblitzrc`). Native binaries can't run there, so rolldown (used by both tsdown and Vite) loads its WebAssembly build, `@rolldown/binding-wasm32-wasi`. That package must be the exact rolldown version, so the root `package.json` pins both:
+
+- `devDependencies["@rolldown/binding-wasm32-wasi"]`
+- `pnpm.overrides.rolldown`, because StackBlitz ignores the lockfile and would otherwise resolve a newer rolldown
+
+When you update Vite or tsdown to a version that needs a newer rolldown, bump both to the same version. CI fails if they differ from the rolldown in `pnpm-lock.yaml`. The build skips the `.d.ts` output on WebContainer, because the declaration parser has no WebAssembly build.
+
 ## Before opening a PR
 
 ```bash

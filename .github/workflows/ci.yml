@@ -19,6 +19,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # StackBlitz loads rolldown's WebAssembly binding, which must be the exact rolldown version
+      - name: Rolldown WebAssembly binding matches rolldown
+        run: |
+          rolldown=$(grep -oE '^  rolldown@[^:(]+' pnpm-lock.yaml | sort -u | sed 's/.*@//')
+          binding=$(node -p "require('./package.json').devDependencies['@rolldown/binding-wasm32-wasi']")
+          override=$(node -p "require('./package.json').pnpm.overrides.rolldown")
+          echo "rolldown: $rolldown, binding: $binding, override: $override"
+          [ "$rolldown" = "$binding" ] && [ "$binding" = "$override" ]
       - run: pnpm format:check
       - run: pnpm build
       - run: pnpm typecheck
