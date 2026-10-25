@@ -1,5 +1,8 @@
 # vite-plugin-pixi-ui-editor
 
+> [!WARNING]
+> **Work in progress.** This project is still under development and is not published to npm yet. APIs and behavior may change without notice.
+
 A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-react) scenes, built as a dev-only Vite plugin. You select, drag, resize, add, delete and reorder UI elements on the running app.
 
 **Your `.tsx` source stays the single source of truth.** Every editor action is a small, local rewrite of the source file, and Vite HMR updates the screen. Edits you make in your IDE show up in the editor too.
