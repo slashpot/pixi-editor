@@ -25,10 +25,6 @@ This runs the demo's dev server in your browser; no account is needed.
 
 ## Install
 
-```bash
-npm i -D vite-plugin-pixi-ui-editor
-```
-
 Peer dependencies: `vite` 6 (6.0.9 or later), 7 or 8, `pixi.js` 8, and `@pixi/react` 8.
 
 ```ts
