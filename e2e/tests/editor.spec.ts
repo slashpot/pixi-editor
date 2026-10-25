@@ -231,12 +231,12 @@ test.describe('drafts', () => {
     expect(await editor.live('star', 'x')).toBe(580);
   });
 
-  test('the drafts survive a page reload', async ({ editor, demo, page }) => {
+  test('the drafts survive a page reload', async ({ editor, demo }) => {
     await editor.select('title');
     await editor.input('text').fill('Draft');
     await editor.input('text').press('Enter');
     await expect.poll(() => editor.live('title', 'text')).toBe('Draft');
-    await page.reload();
+    await editor.reload();
     await expect.poll(() => editor.live('title', 'text')).toBe('Draft');
     await expect(editor.changes).toHaveText('● 1 unapplied');
     expect(await demo.read(SCENE)).not.toContain('text="Draft"');

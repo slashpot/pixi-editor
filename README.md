@@ -23,7 +23,7 @@ This runs the demo's dev server in your browser; no account is needed.
 - Press **Open editor** in the scene (or add `?editor` to the preview URL) to open the editor. When you apply your changes, they are written to the files in the StackBlitz editor next to the preview.
 - Keyboard shortcuts such as `Ctrl/Cmd+S` only work while the preview has focus. Click the preview first.
 
-## Install
+## Setup
 
 Peer dependencies: `vite` 6 (6.0.9 or later), 7 or 8, `pixi.js` 8, and `@pixi/react` 8.
 

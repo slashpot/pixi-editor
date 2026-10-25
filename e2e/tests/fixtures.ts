@@ -105,6 +105,16 @@ export class Editor {
 
   async open() {
     await this.page.goto(`${this.demo.url}?editor`);
+    await this.ready();
+  }
+
+  /** Reloads the page and waits for the editor and the app as `open` does. */
+  async reload() {
+    await this.page.reload();
+    await this.ready();
+  }
+
+  private async ready() {
     await expect(this.row('title')).toBeVisible();
     // the Hierarchy can show before the demo's onInit publishes the app the helpers below read
     await this.page.waitForFunction(() => !!globalThis.__PIXI_APP__);
