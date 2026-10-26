@@ -6,6 +6,7 @@ settings:
 
 overrides:
   rolldown: 1.2.15
+  '@napi-rs/wasm-runtime': 1.2.5
 
 importers:
 

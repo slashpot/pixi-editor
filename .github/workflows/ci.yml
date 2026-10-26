@@ -27,6 +27,7 @@ jobs:
           override=$(node -p "require('./package.json').pnpm.overrides.rolldown")
           echo "rolldown: $rolldown, binding: $binding, override: $override"
           [ "$rolldown" = "$binding" ] && [ "$binding" = "$override" ]
+          node -e "require('@rolldown/binding-wasm32-wasi')"
       - run: pnpm format:check
       - run: pnpm build
       - run: pnpm typecheck

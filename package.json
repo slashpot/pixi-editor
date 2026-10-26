@@ -21,7 +21,8 @@
   "packageManager": "pnpm@10.32.1",
   "pnpm": {
     "overrides": {
-      "rolldown": "1.2.15"
+      "rolldown": "1.2.15",
+      "@napi-rs/wasm-runtime": "1.2.5"
     }
   }
 }

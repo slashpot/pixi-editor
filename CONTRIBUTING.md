@@ -31,6 +31,8 @@ The README's "Open in StackBlitz" link runs `pnpm build && pnpm dev` in a WebCon
 - `devDependencies["@rolldown/binding-wasm32-wasi"]`
 - `pnpm.overrides.rolldown`, because StackBlitz ignores the lockfile and would otherwise resolve a newer rolldown
 
+For the same reason, `pnpm.overrides["@napi-rs/wasm-runtime"]` pins the binding's runtime: 1.2.6 needs `@emnapi/*` 2.0.0-beta.2, but the 1.2.15 binding pins 2.0.0-alpha.5, and the binding then fails to load. Remove the override once a binding release depends on a compatible `@emnapi`.
+
 When you update Vite or tsdown to a version that needs a newer rolldown, bump both to the same version. CI fails if they differ from the rolldown in `pnpm-lock.yaml`. The build skips the `.d.ts` output on WebContainer, because the declaration parser has no WebAssembly build.
 
 ## Before opening a PR
