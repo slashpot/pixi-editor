@@ -48,3 +48,17 @@ pnpm e2e          # end-to-end tests
 - Source rewrites must stay **text splices**. Never regenerate code from the AST: users' formatting and comments must survive byte for byte.
 - Add a unit test for any new source-rewriting rule (`src/server/*.test.ts`) and, for UI behaviour, an e2e test (`e2e/tests`).
 - Note user-facing changes in `CHANGELOG.md`.
+
+## Releasing
+
+Pushing a `vX.Y.Z` tag publishes the plugin to npm. `.github/workflows/release.yml` runs the checks, publishes with npm trusted publishing (provenance included) and creates the GitHub Release from the version's `CHANGELOG.md` section. A prerelease version (`0.2.0-beta.0`) goes to the `next` dist-tag.
+
+```bash
+cd packages/vite-plugin-pixi-ui-editor
+npm version minor --no-git-tag-version   # or patch
+# add a "## X.Y.Z — YYYY-MM-DD" section to CHANGELOG.md, then commit
+git tag vX.Y.Z
+git push origin main vX.Y.Z
+```
+
+The tag must match the package's `version`, or the workflow fails. If the version is already on npm, the workflow skips publishing and only creates the GitHub Release.

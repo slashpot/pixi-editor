@@ -1,7 +1,9 @@
 # vite-plugin-pixi-ui-editor
 
-> [!WARNING]
-> **Work in progress.** This project is still under development and is not published to npm yet. APIs and behavior may change without notice.
+[![npm](https://img.shields.io/npm/v/vite-plugin-pixi-ui-editor)](https://www.npmjs.com/package/vite-plugin-pixi-ui-editor)
+
+> [!NOTE]
+> **Early release.** Until 1.0, APIs and behavior may change between minor versions.
 
 A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-react) scenes, built as a dev-only Vite plugin. You select, drag, resize, add, delete and reorder UI elements on the running app.
 
@@ -25,6 +27,10 @@ This runs the demo's dev server in your browser; no account is needed.
 - Keyboard shortcuts such as `Ctrl/Cmd+S` only work while the preview has focus. Click the preview first.
 
 ## Setup
+
+```bash
+npm i -D vite-plugin-pixi-ui-editor
+```
 
 Peer dependencies: `vite` 6 (6.0.9 or later), 7 or 8, `pixi.js` 8, and `@pixi/react` 8.
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-10-28
 
 - Editor changes are drafts: the app runs them, but nothing is written to disk until you apply them from the review panel (`Ctrl/Cmd+S` or the toolbar), which shows a diff per file. Discard drops them all; an IDE edit to a drafted file wins over its draft.
 

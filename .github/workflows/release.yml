@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # GitHub Release
+  id-token: write # npm trusted publishing
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: npm
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      # trusted publishing needs npm 11.5.1 or later
+      - run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - name: Tag matches the package version
+        id: version
+        run: |
+          version=$(node -p "require('./packages/vite-plugin-pixi-ui-editor/package.json').version")
+          echo "tag: $GITHUB_REF_NAME, package: $version"
+          [ "$GITHUB_REF_NAME" = "v$version" ]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - run: pnpm format:check
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - name: Publish to npm
+        working-directory: packages/vite-plugin-pixi-ui-editor
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # the first version was published by hand, before the trusted publisher could be set up
+          if npm view "vite-plugin-pixi-ui-editor@$VERSION" version 2>/dev/null | grep -q .; then
+            echo "$VERSION is already on npm; skipping publish"
+            exit 0
+          fi
+          tag=latest
+          [[ "$VERSION" == *-* ]] && tag=next
+          npm publish --tag "$tag"
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # the CHANGELOG section of this version, without its heading
+          awk -v v="$VERSION" '/^## / { if (found) exit; found = index($0, "## " v " ") == 1; next } found' CHANGELOG.md > notes.md
+          prerelease=$([[ "$VERSION" == *-* ]] && echo --prerelease || true)
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
