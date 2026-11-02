@@ -23,6 +23,9 @@
     "overrides": {
       "rolldown": "1.2.15",
       "@napi-rs/wasm-runtime": "1.2.5"
+    },
+    "patchedDependencies": {
+      "@rolldown/binding-wasm32-wasi@1.2.15": "patches/@rolldown__binding-wasm32-wasi@1.2.15.patch"
     }
   }
 }

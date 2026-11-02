@@ -8,13 +8,18 @@ overrides:
   rolldown: 1.2.15
   '@napi-rs/wasm-runtime': 1.2.5
 
+patchedDependencies:
+  '@rolldown/binding-wasm32-wasi@1.2.15':
+    hash: 3d15cbb83490cd0dd1d812497a3c082b85873305172d32822154d604a453810e
+    path: patches/@rolldown__binding-wasm32-wasi@1.2.15.patch
+
 importers:
 
   .:
     devDependencies:
       '@rolldown/binding-wasm32-wasi':
         specifier: 1.2.15
-        version: 1.2.15
+        version: 1.2.15(patch_hash=3d15cbb83490cd0dd1d812497a3c082b85873305172d32822154d604a453810e)
       prettier:
         specifier: ^3.6.2
         version: 3.9.10
@@ -1265,7 +1270,7 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.2.15':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.2.15':
+  '@rolldown/binding-wasm32-wasi@1.2.15(patch_hash=3d15cbb83490cd0dd1d812497a3c082b85873305172d32822154d604a453810e)':
     dependencies:
       '@emnapi/core': 2.0.0-alpha.5
       '@emnapi/runtime': 2.0.0-alpha.5

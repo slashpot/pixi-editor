@@ -1,0 +1,34 @@
+diff --git a/rolldown-binding.wasi-browser.js b/rolldown-binding.wasi-browser.js
+index 00ab561d9978efe85adc4bb0fab3d4fa31331fb8..739b6731a2c37fc3fc46f2841087cf0ee4da66ff 100644
+--- a/rolldown-binding.wasi-browser.js
++++ b/rolldown-binding.wasi-browser.js
+@@ -82,9 +82,10 @@ if (!__wasmResponse.ok) {
+ }
+ const __wasmFile = await __wasmResponse.arrayBuffer()
+ 
++// patched: 1 GiB initial / 4 GiB max is more than iPad Safari can reserve; the module needs ~63 MiB
+ const __sharedMemory = new WebAssembly.Memory({
+-  initial: 16384,
+-  maximum: 65536,
++  initial: 1024,
++  maximum: 16384,
+   shared: true,
+ })
+ const __asyncWorkPoolSize = 4
+diff --git a/rolldown-binding.wasi.cjs b/rolldown-binding.wasi.cjs
+index 7897832950351e23e3f3e3692baafbe069ed49bb..3531c96987e04abaa757896f0cd70e838a19721b 100644
+--- a/rolldown-binding.wasi.cjs
++++ b/rolldown-binding.wasi.cjs
+@@ -623,9 +623,10 @@ const __wasi = new __nodeWASI({
+   },
+ })
+ 
++// patched: 1 GiB initial / 4 GiB max is more than iPad Safari can reserve; the module needs ~63 MiB
+ const __sharedMemory = new WebAssembly.Memory({
+-  initial: 16384,
+-  maximum: 65536,
++  initial: 1024,
++  maximum: 16384,
+   shared: true,
+ })
+ 

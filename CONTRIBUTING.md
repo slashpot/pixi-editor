@@ -33,6 +33,8 @@ The README's "Open in StackBlitz" link runs `pnpm build && pnpm dev` in a WebCon
 
 For the same reason, `pnpm.overrides["@napi-rs/wasm-runtime"]` pins the binding's runtime: 1.2.6 needs `@emnapi/*` 2.0.0-beta.2, but the 1.2.15 binding pins 2.0.0-alpha.5, and the binding then fails to load. Remove the override once a binding release depends on a compatible `@emnapi`.
 
+`patches/@rolldown__binding-wasm32-wasi@<version>.patch` shrinks the binding's shared WebAssembly memory from 1 GiB initial / 4 GiB max to 64 MiB / 1 GiB (the module itself needs about 63 MiB). iPad Safari can't reserve the original size, so rolldown fails there with "Cannot find native binding". When you bump rolldown, recreate the patch for the new version with `pnpm patch @rolldown/binding-wasm32-wasi@<version>`. pnpm fails the install if the patch no longer matches an installed version.
+
 When you update Vite or tsdown to a version that needs a newer rolldown, bump both to the same version. CI fails if they differ from the rolldown in `pnpm-lock.yaml`. The build skips the `.d.ts` output on WebContainer, because the declaration parser has no WebAssembly build.
 
 ## Before opening a PR
