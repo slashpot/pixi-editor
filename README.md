@@ -23,6 +23,7 @@ A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-re
 
 This runs the demo's dev server in your browser; no account is needed.
 
+- Open it in a desktop browser. On iPad Safari, the demo page currently crashes as soon as it opens.
 - The first start takes a while, because it installs the dependencies and builds the plugin.
 - If the page gets stuck on importing the GitHub project, refresh it.
 - Press **Open editor** in the scene (or add `?editor` to the preview URL) to open the editor. When you apply your changes, they are written to the files in the StackBlitz editor next to the preview.
