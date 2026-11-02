@@ -7,6 +7,8 @@
 
 A Unity-like visual editor for [`@pixi/react`](https://github.com/pixijs/pixi-react) scenes, built as a dev-only Vite plugin. You select, drag, resize, add, delete and reorder UI elements on the running app.
 
+![Selecting and dragging elements, reviewing the diff, applying it to Scene.tsx, and an IDE edit showing up live](https://raw.githubusercontent.com/slashpot/pixi-editor/main/docs/demo.gif)
+
 **Your `.tsx` source stays the single source of truth.** Every editor action is a small, local rewrite of the source file, and Vite HMR updates the screen. Edits you make in your IDE show up in the editor too.
 
 **Nothing touches your files until you confirm.** Editor changes are kept as a draft on the dev server: the app runs the draft, while the files on disk stay as they were. Review the diff and apply it (or discard it) from the toolbar.

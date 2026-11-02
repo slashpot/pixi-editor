@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["tests", "playwright.config.ts"]
+  "include": ["tests", "record", "playwright.config.ts", "record.config.ts"]
 }
