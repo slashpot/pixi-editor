@@ -1,1 +1,4 @@
-{ "installDependencies": true, "startCommand": "pnpm build && pnpm dev" }
+{
+  "installDependencies": false,
+  "startCommand": "pnpm --filter react-demo add -D vite-plugin-pixi-ui-editor@latest && pnpm dev"
+}
