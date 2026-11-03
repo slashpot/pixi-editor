@@ -1,1 +1,1 @@
-{ "installDependencies": true, "startCommand": "pnpm build && pnpm dev" }
+{ "installDependencies": false, "startCommand": "cp -R examples/react-demo/index.html examples/react-demo/src examples/react-demo/public diag-control/demo/ && cd diag-control/demo && npm install && npx vite" }
