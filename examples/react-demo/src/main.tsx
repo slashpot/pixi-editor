@@ -4,6 +4,7 @@ import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { mark } from './diag';
 import { FONT } from './theme';
 
 // the pixi intrinsics the scene (and the editor's "Add" menu) uses
@@ -16,10 +17,12 @@ const assets = [
 ];
 
 // Pixi measures text once, so the font must be ready before the first render
-void Promise.all([Assets.load(assets), document.fonts.load(`40px "${FONT}"`)]).then(() =>
+mark('main');
+void Promise.all([Assets.load(assets), document.fonts.load(`40px "${FONT}"`)]).then(() => {
+  mark('assets-loaded');
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
     </StrictMode>,
-  ),
-);
+  );
+});

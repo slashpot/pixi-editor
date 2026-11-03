@@ -1,5 +1,6 @@
 import { useTick } from '@pixi/react';
 import { Texture, type Ticker } from 'pixi.js';
+import { diagFlags } from './diag';
 import { createSwirl } from './swirl';
 import { useScreen } from './useScreen';
 
@@ -19,7 +20,7 @@ export function Backdrop() {
       texture={Texture.from('background')}
       width={width}
       height={height}
-      filters={FILTERS}
+      filters={diagFlags.noSwirl ? undefined : FILTERS}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { Application } from '@pixi/react';
 import { Backdrop } from './Backdrop';
 import { CloseEditor } from './CloseEditor';
+import { diagFlags, markPixi } from './diag';
 import { editorOn } from './editorMode';
 import { Scene } from './Scene';
 
@@ -10,9 +11,12 @@ export function App() {
       <Application
         resizeTo={window}
         background="#17121f"
-        antialias
+        antialias={!diagFlags.noAntialias}
         // the devtools convention; also lets the e2e tests reach the app
-        onInit={(app) => (globalThis.__PIXI_APP__ = app)}
+        onInit={(app) => {
+          globalThis.__PIXI_APP__ = app;
+          markPixi(app);
+        }}
       >
         <Backdrop />
         <Scene />
