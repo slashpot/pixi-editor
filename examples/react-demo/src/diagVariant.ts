@@ -3,7 +3,7 @@
  * these differently, because the iPad preview crashes before a query string can be typed.
  */
 export const VARIANT = {
-  name: 'baseline',
+  name: 'lean',
   /** no shader filter on the backdrop */
   noSwirl: false,
   /** antialias off */
