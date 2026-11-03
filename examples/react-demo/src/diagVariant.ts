@@ -3,9 +3,9 @@
  * these differently, because the iPad preview crashes before a query string can be typed.
  */
 export const VARIANT = {
-  name: 'baseline',
+  name: 'noswirl',
   /** no shader filter on the backdrop */
-  noSwirl: false,
+  noSwirl: true,
   /** antialias off */
   noAntialias: false,
   /** don't render the Pixi app at all: only the diag overlay */
