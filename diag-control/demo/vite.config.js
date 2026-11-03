@@ -1,4 +1,4 @@
-// diag branch only: the demo app on its own, outside the monorepo, without the editor plugin.
+// diag branch only: the demo app on its own, outside the monorepo, without the editor plugin, on Vite 8.
 // The start command copies index.html, src/ and public/ in from examples/react-demo.
 import react from '@vitejs/plugin-react';
 
