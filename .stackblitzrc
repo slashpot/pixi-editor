@@ -1,1 +1,5 @@
-{ "installDependencies": true, "startCommand": "pnpm build && pnpm dev" }
+{
+  "installDependencies": true,
+  "env": { "NAPI_RS_ASYNC_WORK_POOL_SIZE": "1" },
+  "startCommand": "node diag-control/report.mjs && pnpm build && pnpm dev"
+}
