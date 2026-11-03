@@ -1,1 +1,1 @@
-{ "installDependencies": true, "startCommand": "pnpm build && pnpm dev" }
+{ "installDependencies": true, "startCommand": "pnpm build && node diag-control/report.mjs 20 && pnpm dev" }
