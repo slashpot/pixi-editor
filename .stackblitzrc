@@ -1,1 +1,1 @@
-{ "installDependencies": false, "startCommand": "cd diag-control/vite && npm install && npx vite" }
+{ "installDependencies": false, "startCommand": "cd diag-control/react && npm install && npx vite" }
