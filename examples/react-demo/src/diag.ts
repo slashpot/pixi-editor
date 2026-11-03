@@ -1,4 +1,5 @@
 import type { Application } from 'pixi.js';
+import { VARIANT } from './diagVariant';
 
 /**
  * Crash diagnostics for the iPad Safari preview (diag branch only). Every event goes to the
@@ -10,8 +11,12 @@ const KEY = 'pixi-diag-trail';
 const TRAIL_SIZE = 40;
 const params = new URLSearchParams(window.location.search);
 
-/** Experiments: `?noswirl` drops the backdrop's shader filter, `?noaa` turns antialiasing off. */
-export const diagFlags = { noSwirl: params.has('noswirl'), noAntialias: params.has('noaa') };
+/** The branch's experiment (src/diagVariant.ts); `?noswirl`, `?noaa` and `?nopixi` add to it. */
+export const diagFlags = {
+  noSwirl: VARIANT.noSwirl || params.has('noswirl'),
+  noAntialias: VARIANT.noAntialias || params.has('noaa'),
+  noPixi: VARIANT.noPixi || params.has('nopixi'),
+};
 
 type Entry = { t: number; event: string; data?: unknown };
 type Trail = { id: string; startedAt: number; lastBeat: number; ended?: string; entries: Entry[] };
@@ -95,7 +100,9 @@ mark('boot', {
   memoryGB: nav.deviceMemory,
   isolated: window.crossOriginIsolated,
   iframe: window.self !== window.top,
+  variant: VARIANT.name,
   flags: diagFlags,
+  hmr: !!import.meta.hot,
 });
 if (previous)
   mark('previous-load', { id: previous.id, ended: previous.ended ?? 'CRASHED', last: previous.entries.slice(-6) });
@@ -154,7 +161,7 @@ let framesAtLastSend = 0;
 setInterval(() => {
   trail.lastBeat = Date.now();
   beats++;
-  overlay.textContent = `${overlayHead}this load ${trail.id}: ${beats}s, ${frames} frames, longest gap ${Math.round(longestGap)}ms`;
+  overlay.textContent = `[${VARIANT.name}]\n${overlayHead}this load ${trail.id}: ${beats}s, ${frames} frames, longest gap ${Math.round(longestGap)}ms`;
   if (!overlay.isConnected && document.body) document.body.append(overlay);
   if (beats % 3 === 0) {
     mark('beat', { frames, fps: Math.round((frames - framesAtLastSend) / 3), longestGapMs: Math.round(longestGap) });
