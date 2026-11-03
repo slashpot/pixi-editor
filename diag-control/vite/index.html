@@ -1,11 +1,9 @@
 <!doctype html>
-<!-- diag branch only: a plain Vite 7 page (esbuild, no rolldown), nothing from this project -->
+<!-- diag branch only: plain Vite 7 plus pixi.js (pre-bundled by Vite), nothing else from this project -->
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <body style="margin: 0; padding: 24px; font: 24px system-ui; background: #17121f; color: #fff">
-  <h1>Control: plain Vite 7</h1>
+  <h1>Control: Vite 7 + pixi.js</h1>
   <p id="t">loading…</p>
-  <script type="module">
-    let n = 0;
-    setInterval(() => (document.getElementById('t').textContent = 'alive ' + ++n + 's'), 1000);
-  </script>
+  <p id="s">pixi.js: not loaded yet</p>
+  <script type="module" src="./main.js"></script>
 </body>
