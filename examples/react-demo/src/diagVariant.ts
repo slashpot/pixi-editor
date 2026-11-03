@@ -3,7 +3,7 @@
  * these differently, because the iPad preview crashes before a query string can be typed.
  */
 export const VARIANT = {
-  name: 'baseline',
+  name: 'nohmr',
   /** no shader filter on the backdrop */
   noSwirl: false,
   /** antialias off */
@@ -11,5 +11,5 @@ export const VARIANT = {
   /** don't render the Pixi app at all: only the diag overlay */
   noPixi: false,
   /** no Vite WebSocket (server.ws: false), so no HMR and no reload on disconnect */
-  noHmr: false,
+  noHmr: true,
 };
