@@ -1,1 +1,1 @@
-{ "installDependencies": false, "startCommand": "cd diag-control/vite && npm install && npx vite" }
+{ "installDependencies": false, "startCommand": "cd diag-control/vite && npm install && cp node_modules/pixi.js/dist/pixi.min.mjs public/ && npx vite" }
