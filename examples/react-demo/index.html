@@ -43,7 +43,12 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- diag branch only: no app, no pixi.js -->
+    <h1 style="margin: 24px; font: 700 32px system-ui; color: #fff">Control: monorepo pipeline, empty page</h1>
+    <p id="t" style="margin: 24px; font: 24px system-ui; color: #fff">loading…</p>
+    <script>
+      let n = 0;
+      setInterval(() => (document.getElementById('t').textContent = 'alive ' + ++n + 's'), 1000);
+    </script>
   </body>
 </html>
