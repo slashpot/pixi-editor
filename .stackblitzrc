@@ -1,1 +1,1 @@
-{ "installDependencies": true, "startCommand": "pnpm build && pnpm dev" }
+{ "installDependencies": false, "startCommand": "cd diag-control/vite && npm install && npx vite" }
